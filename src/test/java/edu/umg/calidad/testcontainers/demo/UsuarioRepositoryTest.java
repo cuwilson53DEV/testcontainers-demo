@@ -13,6 +13,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Testcontainers
 public class UsuarioRepositoryTest {
@@ -37,10 +39,10 @@ public class UsuarioRepositoryTest {
         try (Connection conn = DriverManager.getConnection(
                 postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
              Statement st = conn.createStatement()) {
-            st.execute("CREATE TABLE usuarios (" +
+                       st.execute("CREATE TABLE usuarios (" +
                     "id SERIAL PRIMARY KEY, " +
                     "nombre VARCHAR(100), " +
-                    "email VARCHAR(100))");
+                    "email VARCHAR(100) UNIQUE)");
         }
     }
 
@@ -53,5 +55,21 @@ public class UsuarioRepositoryTest {
         assertNotNull(encontrado);
         assertEquals("Wilson", encontrado.getNombre());
         assertEquals("wilson@umg.edu", encontrado.getEmail());
+    }
+    
+    @Test
+    void debeDevolverNullSiElUsuarioNoExiste() throws SQLException {
+        Usuario resultado = repo.buscarPorEmail("noexiste@umg.edu");
+
+        assertNull(resultado);
+    }
+
+    @Test
+    void debeRechazarEmailDuplicado() throws SQLException {
+        repo.guardar(new Usuario("Ana", "ana@umg.edu"));
+
+        assertThrows(SQLException.class, () -> {
+            repo.guardar(new Usuario("Ana Duplicada", "ana@umg.edu"));
+        });
     }
 }
